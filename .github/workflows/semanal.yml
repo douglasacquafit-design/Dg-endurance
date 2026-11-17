@@ -1,0 +1,51 @@
+name: Revisão semanal
+
+on:
+  schedule:
+    # Toda segunda-feira às 05:41 (horário de Brasília = 08:41 UTC)
+    - cron: "41 8 * * 1"
+  workflow_dispatch:
+    inputs:
+      enviar_treinos:
+        description: "Enviar a próxima semana de treinos ao intervals.icu (depois de revisar o painel)"
+        type: boolean
+        default: false
+
+jobs:
+  semana:
+    # Segurança: o painel tem dados de saúde e telefones dos atletas.
+    # Só roda se o repositório for PRIVADO (em repositório público, artefatos ficam acessíveis).
+    if: ${{ github.event.repository.private }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+
+      - name: Cadastro de atletas (segredo ATLETAS_YAML)
+        env:
+          ATLETAS_YAML: ${{ secrets.ATLETAS_YAML }}
+        run: |
+          if [ -n "$ATLETAS_YAML" ]; then printf '%s' "$ATLETAS_YAML" > config/atletas.yaml; fi
+
+      - name: Analisar semana e gerar painel
+        env:
+          INTERVALS_API_KEY: ${{ secrets.INTERVALS_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TZ: America/Sao_Paulo
+        run: python -m dgendurance semana --saida saida
+
+      - name: Enviar treinos
+        if: ${{ inputs.enviar_treinos }}
+        env:
+          INTERVALS_API_KEY: ${{ secrets.INTERVALS_API_KEY }}
+          TZ: America/Sao_Paulo
+        run: python -m dgendurance enviar-treinos --pasta "$(ls -d saida/*/ | tail -1)" --confirmar
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: painel-semanal
+          path: saida/
+          retention-days: 30

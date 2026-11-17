@@ -1,0 +1,12 @@
+# Dados pessoais e segredos: nunca vão para o GitHub
+.env
+config/atletas.yaml
+
+# Relatórios gerados
+saida/
+
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+.venv/

@@ -1,0 +1,74 @@
+# ============================================================
+# Modelos de semana por fase
+# ============================================================
+# A fase é calculada automaticamente pelas semanas até a prova alvo:
+#   base        : mais de 16 semanas
+#   construcao  : 8 a 16 semanas
+#   pico        : 3 a 7 semanas
+#   polimento   : 0 a 2 semanas
+#   recuperacao : usada quando o atleta está com alerta VERMELHO
+#                 (ou a cada 4a semana, se "recuperacao_a_cada" > 0)
+#
+# Se o atleta tem folga num dia, os treinos daquele dia vão para o
+# próximo dia livre automaticamente.
+
+recuperacao_a_cada: 4     # a cada N semanas de carga, 1 de recuperação (0 = desliga)
+
+# Fator de volume por distância da prova
+fator_distancia:
+  sprint: 0.6
+  olimpico: 0.75
+  "70.3": 1.0
+  "140.6": 1.3
+
+# Fator de volume por nível
+fator_nivel:
+  iniciante: 0.75
+  intermediario: 1.0
+  avancado: 1.15
+
+semanas:
+  base:
+    seg: [swim_tecnica]
+    ter: [run_rodagem, forca]
+    qua: [bike_endurance]
+    qui: [swim_css, run_regenerativo]
+    sex: [bike_sweetspot]
+    sab: [bike_longo]
+    dom: [run_longo]
+
+  construcao:
+    seg: [swim_tecnica]
+    ter: [run_limiar, forca]
+    qua: [bike_sweetspot]
+    qui: [swim_css, run_rodagem]
+    sex: [bike_vo2]
+    sab: [bike_longo, run_transicao]
+    dom: [run_longo, swim_longo]
+
+  pico:
+    seg: [swim_tecnica]
+    ter: [run_tiros_curtos]
+    qua: [bike_ritmo_prova]
+    qui: [swim_css, run_rodagem]
+    sex: [bike_endurance]
+    sab: [bike_longo, run_transicao]
+    dom: [run_longo, swim_longo]
+
+  polimento:
+    seg: []
+    ter: [swim_css, run_ativacao]
+    qua: [bike_ativacao]
+    qui: [swim_tecnica]
+    sex: [run_regenerativo]
+    sab: [bike_ativacao, run_ativacao]
+    dom: [swim_tecnica]
+
+  recuperacao:
+    seg: []
+    ter: [swim_tecnica]
+    qua: [bike_regenerativo]
+    qui: [run_regenerativo]
+    sex: []
+    sab: [bike_endurance]
+    dom: [run_rodagem]

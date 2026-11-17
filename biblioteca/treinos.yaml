@@ -1,0 +1,259 @@
+# ============================================================
+# Biblioteca de treinos (sintaxe de treino estruturado do intervals.icu)
+# ============================================================
+# Cada treino vira um evento no calendário do atleta no intervals.icu,
+# que envia automaticamente para Garmin (relógio/Edge) e Zwift.
+#
+# Passos (sintaxe intervals.icu):
+#   Pedal:   "10m 65-75%"         -> % do FTP
+#            "15m ramp 50-75%"    -> rampa
+#   Corrida: "10m Z2 Pace"        -> zona de pace
+#            "5m 95-100% Pace"    -> % do pace de limiar
+#            "40m Z2 HR"          -> zona de FC
+#   Natação: "400mtr Z1 Pace"     -> "mtr" = metros (m = minutos!)
+#   Linhas sem passo (texto livre) viram observação para o atleta.
+#
+# tipo: leve | chave | longo | recuperacao | forca
+#   (usado nos alertas: ex. RPE alto em treino "leve")
+# Blocos com "escala: true" aumentam/diminuem conforme volume do atleta e fase.
+# Em blocos com "repetir", a escala muda o número de repetições.
+
+treinos:
+
+  # ---------------------------- PEDAL ----------------------------
+  bike_regenerativo:
+    esporte: Ride
+    nome: "Pedal regenerativo"
+    tipo: recuperacao
+    objetivo: "Soltar as pernas. Bem leve, cadência alta."
+    blocos:
+      - titulo: "Principal"
+        escala: true
+        passos: ["40m 45-55%"]
+
+  bike_endurance:
+    esporte: Ride
+    nome: "Pedal endurance Z2"
+    tipo: leve
+    objetivo: "Base aeróbia. Conversando confortável o tempo todo."
+    blocos:
+      - titulo: "Aquecimento"
+        passos: ["10m ramp 50-65%"]
+      - titulo: "Principal"
+        escala: true
+        passos: ["60m 65-75%"]
+      - titulo: "Desaquecimento"
+        passos: ["5m 50%"]
+
+  bike_sweetspot:
+    esporte: Ride
+    nome: "Sweet spot"
+    tipo: chave
+    objetivo: "Elevar o limiar com custo de fadiga controlado."
+    blocos:
+      - titulo: "Aquecimento"
+        passos: ["15m ramp 50-75%", "3x", "- 1m 100%", "- 1m 55%"]
+      - titulo: "Principal"
+        repetir: 3
+        escala: true
+        passos: ["12m 88-93%", "5m 55%"]
+      - titulo: "Desaquecimento"
+        passos: ["10m 50%"]
+
+  bike_vo2:
+    esporte: Ride
+    nome: "VO2max curto"
+    tipo: chave
+    objetivo: "Potência aeróbia máxima. Tiros fortes, recuperação completa."
+    blocos:
+      - titulo: "Aquecimento"
+        passos: ["15m ramp 50-75%"]
+      - titulo: "Principal"
+        repetir: 5
+        escala: true
+        passos: ["3m 110-120%", "3m 50%"]
+      - titulo: "Desaquecimento"
+        passos: ["10m 50%"]
+
+  bike_longo:
+    esporte: Ride
+    nome: "Longão de pedal"
+    tipo: longo
+    objetivo: "Resistência. Treine a nutrição: 60-90g carbo/hora."
+    blocos:
+      - titulo: "Aquecimento"
+        passos: ["15m ramp 50-68%"]
+      - titulo: "Principal"
+        escala: true
+        passos: ["120m 65-75%"]
+      - titulo: "Desaquecimento"
+        passos: ["10m 50%"]
+
+  bike_ritmo_prova:
+    esporte: Ride
+    nome: "Ritmo de prova (pedal)"
+    tipo: chave
+    objetivo: "Blocos na potência alvo de prova."
+    blocos:
+      - titulo: "Aquecimento"
+        passos: ["15m ramp 50-72%"]
+      - titulo: "Principal"
+        repetir: 3
+        escala: true
+        passos: ["20m 78-85%", "5m 60%"]
+      - titulo: "Desaquecimento"
+        passos: ["10m 50%"]
+
+  bike_ativacao:
+    esporte: Ride
+    nome: "Pedal ativação"
+    tipo: leve
+    objetivo: "Polimento: curto, com estímulos breves."
+    blocos:
+      - titulo: "Aquecimento"
+        passos: ["10m ramp 50-70%"]
+      - titulo: "Principal"
+        repetir: 4
+        passos: ["1m 100-105%", "2m 55%"]
+      - titulo: "Desaquecimento"
+        passos: ["10m 55%"]
+
+  # --------------------------- CORRIDA ---------------------------
+  run_regenerativo:
+    esporte: Run
+    nome: "Trote regenerativo"
+    tipo: recuperacao
+    objetivo: "Bem leve. Se a FC subir, caminhe."
+    blocos:
+      - titulo: "Principal"
+        escala: true
+        passos: ["30m Z1 HR"]
+
+  run_rodagem:
+    esporte: Run
+    nome: "Rodagem Z2"
+    tipo: leve
+    objetivo: "Base aeróbia. Respiração tranquila."
+    blocos:
+      - titulo: "Aquecimento"
+        passos: ["10m Z1 HR"]
+      - titulo: "Principal"
+        escala: true
+        passos: ["35m Z2 HR"]
+      - titulo: "Desaquecimento"
+        passos: ["5m Z1 HR"]
+
+  run_limiar:
+    esporte: Run
+    nome: "Intervalado no limiar"
+    tipo: chave
+    objetivo: "Tiros controlados no limiar. Constância > velocidade."
+    blocos:
+      - titulo: "Aquecimento"
+        passos: ["15m Z2 Pace"]
+      - titulo: "Principal"
+        repetir: 4
+        escala: true
+        passos: ["6m 95-100% Pace", "2m Z1 Pace"]
+      - titulo: "Desaquecimento"
+        passos: ["10m Z1 Pace"]
+
+  run_tiros_curtos:
+    esporte: Run
+    nome: "Tiros curtos (VO2)"
+    tipo: chave
+    objetivo: "Velocidade e economia de corrida."
+    blocos:
+      - titulo: "Aquecimento"
+        passos: ["15m Z2 Pace"]
+      - titulo: "Principal"
+        repetir: 8
+        escala: true
+        passos: ["1m 105-110% Pace", "1m30s Z1 Pace"]
+      - titulo: "Desaquecimento"
+        passos: ["10m Z1 Pace"]
+
+  run_longo:
+    esporte: Run
+    nome: "Longão de corrida"
+    tipo: longo
+    objetivo: "Resistência. Hidratação a cada 20 minutos."
+    blocos:
+      - titulo: "Principal"
+        escala: true
+        passos: ["75m Z2 HR"]
+
+  run_transicao:
+    esporte: Run
+    nome: "Transição (brick) - corrida após pedal"
+    tipo: chave
+    objetivo: "Sair da bike direto para a corrida. Primeiro km controlado."
+    blocos:
+      - titulo: "Principal"
+        escala: true
+        passos: ["20m 85-92% Pace"]
+
+  run_ativacao:
+    esporte: Run
+    nome: "Corrida ativação"
+    tipo: leve
+    objetivo: "Polimento: soltar e acordar as pernas."
+    blocos:
+      - titulo: "Principal"
+        passos: ["15m Z2 Pace", "4x", "- 20s 105% Pace", "- 1m40s Z1 Pace", "5m Z1 Pace"]
+
+  # --------------------------- NATAÇÃO ---------------------------
+  swim_tecnica:
+    esporte: Swim
+    nome: "Natação técnica + aeróbio"
+    tipo: leve
+    objetivo: "Educativos e nado contínuo confortável."
+    blocos:
+      - titulo: "Aquecimento"
+        passos: ["300mtr Z1 Pace"]
+      - titulo: "Educativos"
+        passos: ["Educativos à escolha: 8x50m (respiração bilateral, polo aquático, um braço)"]
+      - titulo: "Principal"
+        escala: true
+        passos: ["800mtr Z2 Pace"]
+      - titulo: "Desaquecimento"
+        passos: ["200mtr Z1 Pace"]
+
+  swim_css:
+    esporte: Swim
+    nome: "Natação - séries no CSS"
+    tipo: chave
+    objetivo: "Séries no ritmo de limiar (CSS). Descanso de 15-20s entre tiros."
+    blocos:
+      - titulo: "Aquecimento"
+        passos: ["400mtr Z1 Pace"]
+      - titulo: "Principal"
+        repetir: 8
+        escala: true
+        passos: ["100mtr 98-102% Pace"]
+      - titulo: "Desaquecimento"
+        passos: ["200mtr Z1 Pace"]
+
+  swim_longo:
+    esporte: Swim
+    nome: "Natação contínua (resistência)"
+    tipo: longo
+    objetivo: "Nado contínuo no ritmo de prova. Treine a sighting (olhar à frente)."
+    blocos:
+      - titulo: "Aquecimento"
+        passos: ["300mtr Z1 Pace"]
+      - titulo: "Principal"
+        escala: true
+        passos: ["1500mtr Z2-Z3 Pace"]
+      - titulo: "Desaquecimento"
+        passos: ["200mtr Z1 Pace"]
+
+  # ---------------------------- FORÇA ----------------------------
+  forca:
+    esporte: WeightTraining
+    nome: "Fortalecimento"
+    tipo: forca
+    objetivo: "Core, glúteos e posterior. Prevenção de lesões."
+    blocos:
+      - titulo: "Circuito"
+        passos: ["3 voltas: agachamento búlgaro 10/10, ponte unilateral 12/12, prancha 45s, prancha lateral 30s/30s, panturrilha 15"]

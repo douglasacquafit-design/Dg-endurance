@@ -1,0 +1,39 @@
+# ============================================================
+# DG Endurance - configuração geral
+# ============================================================
+
+treinador:
+  nome: "Douglas"
+  equipe: "DG Endurance"
+
+# Semana de treino: segunda a domingo.
+# "semanas_a_frente: 1" = na segunda-feira o sistema analisa a semana que
+# terminou e já prepara a prescrição da PRÓXIMA semana (que começa daqui a 7 dias).
+# Assim você tem a semana inteira para revisar, sem trabalho no fim de semana.
+semanas_a_frente: 1
+
+# Inteligência artificial (rascunhos de feedback)
+ia:
+  modelo: "claude-opus-5-5"
+  esforco: "medium"          # low | medium | high
+  # Se false, gera feedbacks por modelo de texto (sem IA, sem custo).
+  ativa: true
+
+# Limites para os alertas (semáforo verde / amarelo / vermelho)
+alertas:
+  tsb_amarelo: -20           # forma (CTL - ATL) abaixo disso = atenção
+  tsb_vermelho: -30          # abaixo disso = risco de overreaching
+  rampa_amarelo: 5           # aumento de CTL por semana
+  rampa_vermelho: 8
+  cumprimento_amarelo: 0.75  # % dos treinos planejados realizados
+  cumprimento_vermelho: 0.50
+  dias_sem_treinar: 4        # dias seguidos sem nenhuma atividade
+  queda_hrv: 0.12            # queda de HRV vs. média de 4 semanas (12%)
+  sono_minimo_h: 6.0
+  rpe_alto_treino_leve: 7    # RPE >= 7 em treino que era para ser leve
+  # Palavras nos comentários do atleta (procuradas pelo início da palavra;
+  # palavras de até 4 letras, como "dor", precisam aparecer inteiras)
+  palavras_dor: ["dor", "dores", "dolorid", "doendo", "lesão", "lesao", "machu", "inflam", "fisgada",
+                 "tendin", "canelite", "fascite", "joelho", "panturrilha", "travou"]
+  palavras_cansaco: ["cansad", "exaust", "esgotad", "sem energia", "pesad", "mal dormi",
+                     "doente", "gripe", "febre", "resfriad", "estress"]

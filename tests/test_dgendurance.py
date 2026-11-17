@@ -129,7 +129,7 @@ def test_feedback_ia_monta_requisicao_e_le_resposta(resumos, cfg):
 # ---------------- ponta a ponta ----------------
 def test_comando_semana_demo(tmp_path):
     main(["semana", "--demo", "--sem-ia", "--data", "2026-11-17", "--saida", str(tmp_path)])
-    pasta = tmp_path / "2026-11-09"
+    pasta = tmp_path / "demo-2026-11-09"
     html = (pasta / "painel.html").read_text(encoding="utf-8")
     assert "Bruno Lima" in html and "wa.me/5511999990002" in html
     dados = json.loads((pasta / "semana.json").read_text(encoding="utf-8"))
@@ -181,3 +181,71 @@ def test_importar_planilhas(tmp_path):
     atletas, erros = importar(ruim)
     graves = [e for e in erros if "(aviso)" not in e]
     assert [a["nome"] for a in atletas] == ["João"] and len(graves) == 3
+
+
+# ---------------- vários treinadores (piloto) ----------------
+@pytest.fixture
+def treinador_teste():
+    import shutil
+    from dgendurance.config import PASTA_TREINADORES
+    from dgendurance.treinadores import criar_treinador
+
+    pasta = PASTA_TREINADORES / "pytest-treinador"
+    shutil.rmtree(pasta, ignore_errors=True)
+    criar_treinador("Pytest Treinador", "Equipe Pytest", slug="pytest-treinador")
+    yield pasta
+    shutil.rmtree(pasta, ignore_errors=True)
+
+
+def test_treinador_herda_e_sobrescreve(treinador_teste):
+    from dgendurance.config import listar_treinadores
+
+    assert "pytest-treinador" in listar_treinadores()
+    (treinador_teste / "config.yaml").write_text(
+        'treinador: {nome: "P", equipe: "Equipe Pytest"}\nalertas: {tsb_vermelho: -40}\n', encoding="utf-8")
+    cfg = carregar_config(treinador="pytest-treinador")
+    assert cfg.geral["treinador"]["equipe"] == "Equipe Pytest"
+    assert cfg.alertas["tsb_vermelho"] == -40          # sobrescrito
+    assert cfg.alertas["tsb_amarelo"] == -20           # herdado
+    assert "Exemplos de mensagens do treinador" in cfg.estilo_feedback  # estilo próprio, não o do dono
+    assert cfg.atletas == []
+
+
+def test_chaves_nao_se_misturam(treinador_teste, monkeypatch):
+    monkeypatch.setenv("INTERVALS_API_KEY", "chave-do-dono")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "ia-do-dono")
+    cfg = carregar_config(treinador="pytest-treinador")
+    assert cfg.segredo("INTERVALS_API_KEY") == ""            # nunca usa a chave do dono
+    assert cfg.segredo("ANTHROPIC_API_KEY") == "ia-do-dono"  # IA pode ser compartilhada no piloto
+    (treinador_teste / "segredos.env").write_text("INTERVALS_API_KEY=chave-dele\nANTHROPIC_API_KEY=ia-dele\n")
+    cfg = carregar_config(treinador="pytest-treinador")
+    assert cfg.segredo("INTERVALS_API_KEY") == "chave-dele" and cfg.segredo("ANTHROPIC_API_KEY") == "ia-dele"
+    assert carregar_config().segredo("INTERVALS_API_KEY") == "chave-do-dono"
+
+
+def test_biblioteca_propria(treinador_teste):
+    import yaml
+
+    (treinador_teste / "biblioteca").mkdir()
+    treinos = {"treinos": {"so_corrida": {"esporte": "Run", "nome": "Corrida do P", "tipo": "leve",
+                                          "blocos": [{"titulo": "Principal", "passos": ["30m Z2 HR"]}]}}}
+    semanas = {"semanas": {f: {"ter": ["so_corrida"]} for f in
+                           ("base", "construcao", "pico", "polimento", "recuperacao")}}
+    (treinador_teste / "biblioteca" / "treinos.yaml").write_text(yaml.safe_dump(treinos), encoding="utf-8")
+    (treinador_teste / "biblioteca" / "semanas.yaml").write_text(yaml.safe_dump(semanas), encoding="utf-8")
+    cfg = carregar_config(treinador="pytest-treinador")
+    atleta = ATLETAS_DEMO[0][0]
+    treinos_semana, _, _ = montar_semana(atleta, date(2026, 11, 30), cfg)
+    assert [t.nome for t in treinos_semana] == ["Corrida do P"]
+
+
+def test_demo_com_marca_do_treinador(treinador_teste, tmp_path):
+    main(["semana", "--demo", "--sem-ia", "--treinador", "pytest-treinador",
+          "--data", "2026-11-17", "--saida", str(tmp_path)])
+    html = (tmp_path / "pytest-treinador" / "demo-2026-11-09" / "painel.html").read_text(encoding="utf-8")
+    assert "Equipe Pytest" in html
+
+
+def test_treinador_inexistente():
+    with pytest.raises(ValueError, match="não encontrado"):
+        carregar_config(treinador="nao-existe")

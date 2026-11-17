@@ -177,7 +177,7 @@ th,td{{text-align:left;padding:5px 8px;border-bottom:1px solid var(--bd)}}
   <button data-f="pendente">Pendentes</button>
 </div>
 {cards}
-<p class="muted">Gerado automaticamente. Revise antes de enviar: você é o treinador, a IA só faz o rascunho.</p>
+<p class="muted">Gerado automaticamente pelo DG Endurance. Revise antes de enviar: você é o treinador, a IA só faz o rascunho.</p>
 </div>
 <script>
 (function(){{

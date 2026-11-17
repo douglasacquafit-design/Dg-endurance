@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict
@@ -11,7 +10,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 from .analise import ResumoSemana, analisar_semana, inicio_semana
-from .config import RAIZ, Atleta, Config, carregar_config, carregar_env
+from .config import RAIZ, Atleta, Config, carregar_config, carregar_env, listar_treinadores
 from .feedback import Feedback, gerar_feedback
 from .prescricao import montar_semana
 from .relatorio import ItemRelatorio, gerar_html
@@ -38,9 +37,23 @@ def _fonte(args: argparse.Namespace, cfg: Config, semana: date):
 
         cfg.atletas = [a for a, _ in ATLETAS_DEMO]
         return FonteDemo(cfg, semana)
-    from .intervals import FonteIntervals, IntervalsClient
+    from .intervals import FonteIntervals
 
-    return FonteIntervals(IntervalsClient(os.environ.get("INTERVALS_API_KEY", "")))
+    return FonteIntervals(_cliente_intervals(cfg))
+
+
+def _cliente_intervals(cfg: Config):
+    from .intervals import IntervalsClient, IntervalsErro
+
+    chave = cfg.segredo("INTERVALS_API_KEY")
+    if not chave:
+        onde = f"{cfg.pasta / 'segredos.env'}" if cfg.treinador else ".env"
+        raise IntervalsErro(f"Chave do intervals.icu não configurada em {onde}.")
+    return IntervalsClient(chave)
+
+
+def _pasta_saida(base: str, cfg: Config) -> Path:
+    return Path(base) / cfg.treinador if cfg.treinador else Path(base)
 
 
 def _processar(atleta: Atleta, fonte, cfg: Config, analisada: date, prescrita: date, usar_ia: bool) -> ItemRelatorio:
@@ -61,18 +74,40 @@ def _processar(atleta: Atleta, fonte, cfg: Config, analisada: date, prescrita: d
 
 
 def cmd_semana(args: argparse.Namespace) -> None:
-    cfg = carregar_config()
+    if args.todos:
+        alvos = ([None] if carregar_config().atletas else []) + listar_treinadores()
+        if not alvos:
+            sys.exit("Nenhum treinador com atletas cadastrados.")
+        resumo = []
+        for t in alvos:
+            print(f"\n=== {t or 'principal'} ===")
+            try:
+                resumo.append((t or "principal", _semana_treinador(args, carregar_config(treinador=t)), None))
+            except (SystemExit, Exception) as e:  # noqa: BLE001 - um treinador com erro não trava os outros
+                resumo.append((t or "principal", None, str(e)))
+                print(f"  ✗ {e}")
+        print("\n=== Resumo ===")
+        for nome, pasta, erro in resumo:
+            print(f"  {'✓' if pasta else '✗'} {nome}: {pasta / 'painel.html' if pasta else erro}")
+        return
+    _semana_treinador(args, carregar_config(treinador=args.treinador))
+
+
+def _semana_treinador(args: argparse.Namespace, cfg: Config) -> Path:
     ref = date.fromisoformat(args.data) if args.data else date.today()
     analisada, prescrita = _semanas(ref, cfg)
     if not args.demo and not cfg.atletas:
-        sys.exit("Nenhum atleta cadastrado. Preencha config/atletas_modelo.xlsx e rode:\n"
-                 "  python -m dgendurance importar-atletas config/atletas_modelo.xlsx\n"
-                 "Ou teste com atletas fictícios: python -m dgendurance semana --demo")
+        flag = f" --treinador {cfg.treinador}" if cfg.treinador else ""
+        planilha = cfg.pasta / "atletas_modelo.xlsx" if cfg.treinador else "config/atletas_modelo.xlsx"
+        sys.exit(f"Nenhum atleta cadastrado. Preencha {planilha} e rode:\n"
+                 f"  python -m dgendurance importar-atletas {planilha}{flag}\n"
+                 f"Ou teste com atletas fictícios: python -m dgendurance semana --demo{flag}")
     fonte = _fonte(args, cfg, analisada)
     atletas = _filtrar(cfg.atletas, args.atleta)
     usar_ia = not args.sem_ia
-    print(f"Analisando semana {analisada:%d/%m} a {analisada + timedelta(days=6):%d/%m} "
-          f"de {len(atletas)} atletas (IA: {'sim' if usar_ia else 'não'})...")
+    treinador = cfg.geral.get("treinador", {})
+    print(f"{treinador.get('equipe', '')}: semana {analisada:%d/%m} a {analisada + timedelta(days=6):%d/%m}, "
+          f"{len(atletas)} atletas (IA: {'sim' if usar_ia else 'não'})...")
 
     with ThreadPoolExecutor(max_workers=args.paralelo) as ex:
         futuros = [ex.submit(_processar, a, fonte, cfg, analisada, prescrita, usar_ia) for a in atletas]
@@ -84,13 +119,13 @@ def cmd_semana(args: argparse.Namespace) -> None:
                   f"{it.atleta.nome}: {it.resumo.horas_total}h, {len(it.resumo.alertas)} alerta(s)"
                   + (f" | ERRO: {it.erro}" if it.erro else ""))
 
-    pasta = Path(args.saida) / analisada.isoformat()
+    pasta = _pasta_saida(args.saida, cfg) / (("demo-" if args.demo else "") + analisada.isoformat())
     pasta.mkdir(parents=True, exist_ok=True)
-    treinador = cfg.geral.get("treinador", {})
     (pasta / "painel.html").write_text(
         gerar_html(itens, analisada, prescrita, treinador.get("nome", ""), treinador.get("equipe", "")),
         encoding="utf-8")
     dados_json = {
+        "treinador": cfg.treinador,
         "semana_analisada": analisada.isoformat(), "semana_prescrita": prescrita.isoformat(),
         "demo": bool(args.demo),
         "atletas": [{
@@ -102,9 +137,11 @@ def cmd_semana(args: argparse.Namespace) -> None:
     }
     (pasta / "semana.json").write_text(json.dumps(dados_json, ensure_ascii=False, indent=1, default=str),
                                        encoding="utf-8")
-    print(f"\nPronto! Abra o painel: {pasta / 'painel.html'}")
-    print(f"Para enviar os treinos da semana {prescrita:%d/%m} aos atletas: "
-          f"python -m dgendurance enviar-treinos --pasta {pasta} --confirmar")
+    print(f"\nPronto! Painel: {pasta / 'painel.html'}")
+    if not args.demo:
+        print(f"Para enviar os treinos da semana {prescrita:%d/%m}: "
+              f"python -m dgendurance enviar-treinos --pasta {pasta} --confirmar")
+    return pasta
 
 
 def _ler_semana(pasta: str) -> dict:
@@ -120,15 +157,14 @@ def cmd_enviar_treinos(args: argparse.Namespace) -> None:
         sys.exit("Essa pasta é de demonstração: atletas fictícios, nada a enviar.")
     atletas = [a for a in dados["atletas"] if not args.atleta or args.atleta.lower() in a["nome"].lower()]
     total = sum(len(a["proxima_semana"]) for a in atletas)
-    print(f"Semana {dados['semana_prescrita']}: {total} treinos para {len(atletas)} atletas.")
+    print(f"{dados.get('treinador') or 'principal'} | semana {dados['semana_prescrita']}: "
+          f"{total} treinos para {len(atletas)} atletas.")
     if not args.confirmar:
         for a in atletas:
             print(f"  {a['nome']}: {len(a['proxima_semana'])} treinos ({a['motivo']})")
         print("\nNada foi enviado (simulação). Adicione --confirmar para enviar ao intervals.icu.")
         return
-    from .intervals import IntervalsClient
-
-    cli = IntervalsClient(os.environ.get("INTERVALS_API_KEY", ""))
+    cli = _cliente_intervals(carregar_config(treinador=dados.get("treinador")))
     for a in atletas:
         try:
             cli.gravar_treinos(a["intervals_id"], a["proxima_semana"])
@@ -148,9 +184,7 @@ def cmd_comentar(args: argparse.Namespace) -> None:
             print(f"  {nome} [{c['id']}]: {c['texto']}")
         print(f"\n{len(pares)} comentários. Nada foi publicado. Use --confirmar para publicar no intervals.icu.")
         return
-    from .intervals import IntervalsClient
-
-    cli = IntervalsClient(os.environ.get("INTERVALS_API_KEY", ""))
+    cli = _cliente_intervals(carregar_config(treinador=dados.get("treinador")))
     for nome, c in pares:
         try:
             cli.comentar_atividade(c["id"], c["texto"])
@@ -160,10 +194,8 @@ def cmd_comentar(args: argparse.Namespace) -> None:
 
 
 def cmd_testar(args: argparse.Namespace) -> None:
-    from .intervals import IntervalsClient
-
-    cfg = carregar_config()
-    cli = IntervalsClient(os.environ.get("INTERVALS_API_KEY", ""))
+    cfg = carregar_config(treinador=args.treinador)
+    cli = _cliente_intervals(cfg)
     eu = cli.atleta("0")
     print(f"Conectado ao intervals.icu como: {eu.get('name')} ({eu.get('id')})")
     for a in cfg.atletas:
@@ -172,7 +204,7 @@ def cmd_testar(args: argparse.Namespace) -> None:
             print(f"  ✓ {a.nome} -> {info.get('name')}")
         except Exception as e:  # noqa: BLE001
             print(f"  ✗ {a.nome} ({a.intervals_id}): {e}")
-    ia = any(os.environ.get(k) for k in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"))
+    ia = any(cfg.segredo(k) for k in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"))
     print(f"IA (Anthropic): {'chave configurada' if ia else 'sem chave, os feedbacks usarão o modelo de texto'}")
 
 
@@ -185,11 +217,39 @@ def cmd_importar(args: argparse.Namespace) -> None:
     graves = [e for e in erros if "(aviso)" not in e]
     if graves:
         sys.exit(f"\n{len(graves)} linha(s) com erro. Corrija a planilha e rode de novo (nada foi gravado).")
-    destino = Path(args.destino)
+    destino = Path(args.destino) if args.destino else carregar_config(treinador=args.treinador).pasta / "atletas.yaml"
     if destino.exists() and not args.sobrescrever:
         sys.exit(f"{destino} já existe. Use --sobrescrever para substituir.")
     gravar_yaml(atletas, destino)
     print(f"✓ {len(atletas)} atletas gravados em {destino}")
+
+
+def cmd_novo_treinador(args: argparse.Namespace) -> None:
+    from .treinadores import criar_treinador
+
+    pasta = criar_treinador(args.nome, args.equipe, args.slug)
+    slug = pasta.name
+    print(f"✓ Treinador criado em {pasta}\n")
+    print("Próximos passos:")
+    print(f"  1. Demonstração com a marca dele:  python -m dgendurance semana --demo --treinador {slug}")
+    print(f"  2. Ele preenche a planilha:        {pasta / 'atletas_modelo.xlsx'}")
+    print(f"     e você importa:                 python -m dgendurance importar-atletas <planilha> --treinador {slug}")
+    print(f"  3. Chave do intervals.icu dele em: {pasta / 'segredos.env'}")
+    print(f"  4. Mensagens reais dele em:        {pasta / 'estilo_feedback.md'}")
+    print(f"  5. Conferir:                       python -m dgendurance testar-conexao --treinador {slug}")
+
+
+def cmd_treinadores(args: argparse.Namespace) -> None:
+    lista = listar_treinadores()
+    if not lista:
+        print("Nenhum treinador no piloto. Crie com: python -m dgendurance novo-treinador \"Nome\" --equipe \"Equipe\"")
+        return
+    for t in lista:
+        cfg = carregar_config(treinador=t)
+        info = cfg.geral.get("treinador", {})
+        chave = "✓" if cfg.segredo("INTERVALS_API_KEY") else "✗"
+        print(f"  {t:20} {info.get('nome', ''):20} {info.get('equipe', ''):25} "
+              f"{len(cfg.atletas):3} atletas | chave intervals {chave}")
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -204,6 +264,8 @@ def main(argv: list[str] | None = None) -> None:
     s.add_argument("--atleta", help="Processa só atletas cujo nome contém este texto")
     s.add_argument("--saida", default=str(RAIZ / "saida"), help="Pasta de saída")
     s.add_argument("--paralelo", type=int, default=6, help="Atletas processados em paralelo")
+    s.add_argument("--treinador", help="Treinador do piloto (pasta em treinadores/)")
+    s.add_argument("--todos", action="store_true", help="Roda para você e todos os treinadores do piloto")
     s.set_defaults(func=cmd_semana)
 
     e = sub.add_parser("enviar-treinos", help="Envia a semana prescrita ao intervals.icu (-> Garmin/Zwift)")
@@ -220,12 +282,23 @@ def main(argv: list[str] | None = None) -> None:
 
     im = sub.add_parser("importar-atletas", help="Importa o cadastro de atletas de uma planilha (.xlsx ou .csv)")
     im.add_argument("planilha", help="Arquivo .xlsx ou .csv (modelo: config/atletas_modelo.csv)")
-    im.add_argument("--destino", default=str(RAIZ / "config" / "atletas.yaml"))
+    im.add_argument("--treinador", help="Treinador do piloto (grava na pasta dele)")
+    im.add_argument("--destino", help="Arquivo de destino (padrão: atletas.yaml do treinador)")
     im.add_argument("--sobrescrever", action="store_true")
     im.set_defaults(func=cmd_importar)
 
     t = sub.add_parser("testar-conexao", help="Confere a chave do intervals.icu e o acesso a cada atleta")
+    t.add_argument("--treinador")
     t.set_defaults(func=cmd_testar)
+
+    n = sub.add_parser("novo-treinador", help="Cadastra um treinador no piloto")
+    n.add_argument("nome", help="Nome do treinador")
+    n.add_argument("--equipe", help="Nome da assessoria/equipe")
+    n.add_argument("--slug", help="Nome curto da pasta (padrão: gerado do nome)")
+    n.set_defaults(func=cmd_novo_treinador)
+
+    lt = sub.add_parser("treinadores", help="Lista os treinadores do piloto")
+    lt.set_defaults(func=cmd_treinadores)
 
     args = p.parse_args(argv)
     from .intervals import IntervalsErro

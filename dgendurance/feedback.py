@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import os
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -82,7 +81,9 @@ def gerar_feedback_ia(atleta: Atleta, r: ResumoSemana, proxima: list[dict[str, A
                       motivo: str, cfg: Config, cliente: Any = None) -> Feedback:
     import anthropic
 
-    cliente = cliente or anthropic.Anthropic()
+    if cliente is None:
+        chave = cfg.segredo("ANTHROPIC_API_KEY")
+        cliente = anthropic.Anthropic(api_key=chave) if chave else anthropic.Anthropic()
     resposta = cliente.beta.messages.create(
         model=cfg.ia.get("modelo", "claude-opus-5-5"),
         max_tokens=16000,
@@ -138,7 +139,7 @@ def gerar_feedback_modelo(atleta: Atleta, r: ResumoSemana, motivo: str) -> Feedb
 
 def gerar_feedback(atleta: Atleta, r: ResumoSemana, proxima: list[dict[str, Any]], motivo: str,
                    cfg: Config, usar_ia: bool = True) -> Feedback:
-    tem_credencial = any(os.environ.get(k) for k in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"))
+    tem_credencial = any(cfg.segredo(k) for k in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"))
     if usar_ia and cfg.ia.get("ativa", True) and tem_credencial:
         try:
             return gerar_feedback_ia(atleta, r, proxima, motivo, cfg)

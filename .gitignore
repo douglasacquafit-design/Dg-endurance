@@ -1,6 +1,11 @@
 # Dados pessoais e segredos: nunca vão para o GitHub
 .env
 config/atletas.yaml
+segredos.env
+
+# Treinadores do piloto (atletas, chaves e estilo de cada um): só o modelo é versionado
+treinadores/*
+!treinadores/_modelo/
 
 # Relatórios gerados
 saida/

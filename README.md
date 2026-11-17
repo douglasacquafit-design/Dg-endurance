@@ -42,7 +42,7 @@ pip install -r requirements.txt
 python -m dgendurance semana --demo --sem-ia
 ```
 
-Abra o arquivo `saida/<data>/painel.html` no navegador. São 6 atletas fictícios, um em cada
+Abra o arquivo `saida/demo-<data>/painel.html` no navegador. São 6 atletas fictícios, um em cada
 situação típica: semana perfeita, excesso de carga, faltas, dor relatada, fadiga e sumiço.
 
 ### 2. Monte a central no intervals.icu (uma vez)
@@ -164,6 +164,23 @@ download em **Actions → Revisão semanal → Artifacts**. Para usar:
 3. Para enviar os treinos depois de revisar: Actions → Revisão semanal → Run workflow → marque
    "Enviar a próxima semana".
 
+## Piloto com outros treinadores
+
+O sistema atende você e outros treinadores ao mesmo tempo. Cada um tem a própria pasta em
+`treinadores/` com atletas, chave do intervals.icu, estilo de feedback e, se quiser, biblioteca de
+treinos própria. Essas pastas nunca vão para o GitHub, e a chave de um treinador nunca é usada
+para os atletas de outro.
+
+```bash
+python -m dgendurance novo-treinador "Marcos Silva" --equipe "MS Triathlon"
+python -m dgendurance semana --demo --treinador marcos-silva   # demonstração com a marca dele
+python -m dgendurance semana --todos                           # segunda-feira: todos de uma vez
+python -m dgendurance treinadores                              # visão geral do piloto
+```
+
+O passo a passo completo (convite, entrada, rotina, o que medir e termo de participação)
+está em **[PILOTO.md](PILOTO.md)**.
+
 ## Para reduzir o "responder atletas" do dia a dia
 
 Ferramenta nenhuma resolve isso sozinha. Estas práticas combinam com o sistema:
@@ -186,6 +203,7 @@ dgendurance/
   feedback.py    rascunhos com IA (Claude) ou modelo de texto
   relatorio.py   painel HTML
   importar.py    importa atletas da planilha
+  treinadores.py cadastro de treinadores do piloto
   demo.py        dados fictícios para testar
   cli.py         comandos
 tests/           testes automáticos (python -m pytest)

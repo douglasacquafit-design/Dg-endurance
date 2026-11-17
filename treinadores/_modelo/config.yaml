@@ -1,0 +1,20 @@
+# ============================================================
+# Configuração do treinador (piloto DG Endurance)
+# Só coloque aqui o que for DIFERENTE da configuração principal
+# (config/config.yaml). O resto é herdado.
+# ============================================================
+
+treinador:
+  nome: "{{NOME}}"
+  equipe: "{{EQUIPE}}"
+
+# Ciclo padrão de carga dos atletas dele: "3:1", "2:1" ou "livre"
+# ciclo_padrao: "3:1"
+
+# Para mudar algum limite de alerta, descomente e ajuste:
+# alertas:
+#   tsb_vermelho: -30
+#   sono_minimo_h: 6.0
+
+# Biblioteca de treinos própria: crie a pasta "biblioteca/" aqui dentro com
+# treinos.yaml (e, se quiser, semanas.yaml). Sem ela, usa a biblioteca principal.

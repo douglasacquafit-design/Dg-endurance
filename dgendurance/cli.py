@@ -64,6 +64,10 @@ def cmd_semana(args: argparse.Namespace) -> None:
     cfg = carregar_config()
     ref = date.fromisoformat(args.data) if args.data else date.today()
     analisada, prescrita = _semanas(ref, cfg)
+    if not args.demo and not cfg.atletas:
+        sys.exit("Nenhum atleta cadastrado. Preencha config/atletas_modelo.xlsx e rode:\n"
+                 "  python -m dgendurance importar-atletas config/atletas_modelo.xlsx\n"
+                 "Ou teste com atletas fictícios: python -m dgendurance semana --demo")
     fonte = _fonte(args, cfg, analisada)
     atletas = _filtrar(cfg.atletas, args.atleta)
     usar_ia = not args.sem_ia
@@ -172,6 +176,22 @@ def cmd_testar(args: argparse.Namespace) -> None:
     print(f"IA (Anthropic): {'chave configurada' if ia else 'sem chave, os feedbacks usarão o modelo de texto'}")
 
 
+def cmd_importar(args: argparse.Namespace) -> None:
+    from .importar import gravar_yaml, importar
+
+    atletas, erros = importar(Path(args.planilha))
+    for e in erros:
+        print(f"  ⚠ {e}")
+    graves = [e for e in erros if "(aviso)" not in e]
+    if graves:
+        sys.exit(f"\n{len(graves)} linha(s) com erro. Corrija a planilha e rode de novo (nada foi gravado).")
+    destino = Path(args.destino)
+    if destino.exists() and not args.sobrescrever:
+        sys.exit(f"{destino} já existe. Use --sobrescrever para substituir.")
+    gravar_yaml(atletas, destino)
+    print(f"✓ {len(atletas)} atletas gravados em {destino}")
+
+
 def main(argv: list[str] | None = None) -> None:
     carregar_env()
     p = argparse.ArgumentParser(prog="dgendurance", description="DG Endurance: análise, feedback e prescrição semanal")
@@ -198,11 +218,22 @@ def main(argv: list[str] | None = None) -> None:
     c.add_argument("--confirmar", action="store_true")
     c.set_defaults(func=cmd_comentar)
 
+    im = sub.add_parser("importar-atletas", help="Importa o cadastro de atletas de uma planilha (.xlsx ou .csv)")
+    im.add_argument("planilha", help="Arquivo .xlsx ou .csv (modelo: config/atletas_modelo.csv)")
+    im.add_argument("--destino", default=str(RAIZ / "config" / "atletas.yaml"))
+    im.add_argument("--sobrescrever", action="store_true")
+    im.set_defaults(func=cmd_importar)
+
     t = sub.add_parser("testar-conexao", help="Confere a chave do intervals.icu e o acesso a cada atleta")
     t.set_defaults(func=cmd_testar)
 
     args = p.parse_args(argv)
-    args.func(args)
+    from .intervals import IntervalsErro
+
+    try:
+        args.func(args)
+    except (IntervalsErro, ValueError, FileNotFoundError) as e:
+        sys.exit(f"Erro: {e}")
 
 
 if __name__ == "__main__":

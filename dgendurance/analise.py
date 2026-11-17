@@ -322,9 +322,14 @@ def gerar_alertas(r: ResumoSemana, lim: dict[str, Any]) -> list[Alerta]:
     if sensacao:
         al.append(Alerta(AMARELO, "Sensação ruim em: " + ", ".join(sensacao), "bem_estar"))
 
-    if r.distribuicao_fc and r.distribuicao_fc.get("z3", 0) > 0.35:
-        al.append(Alerta(AMARELO, f"{r.distribuicao_fc['z3']:.0%} do tempo na Z3 (zona cinzenta): leve não está leve",
-                         "intensidade"))
+    dist = r.distribuicao_fc
+    if dist:
+        if dist.get("z1_z2", 1) < lim.get("leve_minimo", 0.75):
+            al.append(Alerta(AMARELO, f"Só {dist['z1_z2']:.0%} do tempo em Z1-Z2 (alvo 80/20): "
+                             f"Z3 {dist.get('z3', 0):.0%}, Z4+ {dist.get('z4_mais', 0):.0%}", "intensidade"))
+        elif dist.get("z3", 0) > lim.get("z3_maximo", 0.15) and r.fase in ("base", "construcao"):
+            al.append(Alerta(AMARELO, f"{dist['z3']:.0%} do tempo na Z3 (zona cinzenta): leve não está leve",
+                             "intensidade"))
 
     al.sort(key=lambda a: _ORDEM[a.nivel])
     return al

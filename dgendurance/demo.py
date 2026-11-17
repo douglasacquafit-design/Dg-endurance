@@ -1,6 +1,7 @@
 """Dados fictícios no formato do intervals.icu, para testar sem conectar contas."""
 from __future__ import annotations
 
+import copy
 import random
 from datetime import date, timedelta
 from typing import Any
@@ -17,7 +18,7 @@ ATLETAS_DEMO = [
             "Ex-nadador. Tende a exagerar na intensidade."), "exagero"),
     (Atleta("Carla Mendes", "demo3", "5511999990003", "iniciante", 1.0,
             ProvaAlvo("Triathlon Olímpico Santos", date(2027, 3, 7), "olimpico"), ["seg", "qua"],
-            "Médica plantonista, agenda imprevisível."), "faltas"),
+            "Médica plantonista, agenda imprevisível.", ciclo="2:1"), "faltas"),
     (Atleta("Diego Rocha", "demo4", "5511999990004", "intermediario", 1.0,
             ProvaAlvo("Ironman 70.3 Rio", date(2027, 2, 14), "70.3"), ["seg"],
             "Corredor de origem, nada mal."), "dor"),
@@ -40,7 +41,7 @@ class FonteDemo:
 
         # No demo, o histórico usa só semanas de carga (sem recuperação programada)
         self.cfg = copy.copy(cfg)
-        self.cfg.semanas = dict(cfg.semanas, recuperacao_a_cada=0)
+        self.cfg.geral = dict(cfg.geral, ciclo_padrao="livre")
         self.semana = semana
         self.seed = seed
         self.cenarios = {a.intervals_id: c for a, c in ATLETAS_DEMO}
@@ -52,7 +53,9 @@ class FonteDemo:
         rnd = random.Random(f"{self.seed}-{athlete_id}")
         atleta = self.atletas[athlete_id]
         cenario = self.cenarios[athlete_id]
-        planejados_semana, _, _ = montar_semana(atleta, inicio, self.cfg)
+        atleta_hist = copy.copy(atleta)
+        atleta_hist.ciclo = "livre"
+        planejados_semana, _, _ = montar_semana(atleta_hist, inicio, self.cfg)
 
         planejados = []
         for i, t in enumerate(planejados_semana):
@@ -90,7 +93,7 @@ class FonteDemo:
         intensidade_hist = {"sumido": 0.9}.get(cenario, 1.0)
         d = inicio_historico
         while d < inicio:
-            semana_ant, _, _ = montar_semana(atleta, d - timedelta(days=d.weekday()), self.cfg)
+            semana_ant, _, _ = montar_semana(atleta_hist, d - timedelta(days=d.weekday()), self.cfg)
             for t in semana_ant:
                 if t.data == d and rnd.random() < 0.85:
                     tipo = rnd.choice(_TIPO_ATIVIDADE.get(t.esporte, [t.esporte]))

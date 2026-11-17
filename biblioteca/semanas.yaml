@@ -1,18 +1,21 @@
 # ============================================================
-# Modelos de semana por fase
+# Modelos de semana por fase: metodologia POLARIZADA (80/20)
 # ============================================================
-# A fase é calculada automaticamente pelas semanas até a prova alvo:
-#   base        : mais de 16 semanas
-#   construcao  : 8 a 16 semanas
-#   pico        : 3 a 7 semanas
-#   polimento   : 0 a 2 semanas
-#   recuperacao : usada quando o atleta está com alerta VERMELHO
-#                 (ou a cada 4a semana, se "recuperacao_a_cada" > 0)
+# ~80% do tempo em Z1-Z2 e ~20% em intensidade alta, quase nada de Z3.
+# 7 dias com dobras (atletas avançados). Para quem treina menos, use
+# "dias_folga" no cadastro: os treinos daquele dia vão para o próximo dia livre.
+# Treinos FORTES marcados com # FORTE.
 #
-# Se o atleta tem folga num dia, os treinos daquele dia vão para o
-# próximo dia livre automaticamente.
-
-recuperacao_a_cada: 4     # a cada N semanas de carga, 1 de recuperação (0 = desliga)
+# Fase (semanas até a prova alvo):
+#   base        : mais de 16 semanas   -> 2 treinos fortes por semana
+#   construcao  : 8 a 16 semanas       -> 3 treinos fortes
+#   pico        : 3 a 7 semanas        -> 3 treinos fortes, mais específicos (limiar e ritmo de prova)
+#   polimento   : 0 a 2 semanas
+#   recuperacao : alerta VERMELHO de dor/fadiga, ou semana leve do ciclo do atleta
+#                 (ciclo 3:1, 2:1... definido em config.yaml ou por atleta)
+#
+# No pico, o "ritmo de prova" do 70.3 / Ironman cai na Z3: é esperado e
+# o alerta de zona cinzenta não é disparado nas fases de pico e polimento.
 
 # Fator de volume por distância da prova
 fator_distancia:
@@ -29,46 +32,46 @@ fator_nivel:
 
 semanas:
   base:
-    seg: [swim_tecnica]
-    ter: [run_rodagem, forca]
-    qua: [bike_endurance]
-    qui: [swim_css, run_regenerativo]
-    sex: [bike_sweetspot]
-    sab: [bike_longo]
+    seg: [swim_tecnica, forca]
+    ter: [run_rodagem, bike_endurance]
+    qua: [swim_aerobio, bike_vo2]            # FORTE
+    qui: [run_subidas, forca]                # FORTE
+    sex: [swim_tecnica, bike_regenerativo]
+    sab: [bike_longo, run_transicao_leve]
     dom: [run_longo]
 
   construcao:
-    seg: [swim_tecnica]
-    ter: [run_limiar, forca]
-    qua: [bike_sweetspot]
-    qui: [swim_css, run_rodagem]
-    sex: [bike_vo2]
-    sab: [bike_longo, run_transicao]
-    dom: [run_longo, swim_longo]
+    seg: [swim_tecnica, run_regenerativo]
+    ter: [run_tiros_curtos, bike_endurance]  # FORTE
+    qua: [swim_velocidade, bike_vo2_longo]   # FORTE
+    qui: [run_rodagem, forca]
+    sex: [swim_aerobio, bike_regenerativo]
+    sab: [bike_longo, run_transicao]         # FORTE (brick)
+    dom: [run_longo]
 
   pico:
-    seg: [swim_tecnica]
-    ter: [run_tiros_curtos]
-    qua: [bike_ritmo_prova]
-    qui: [swim_css, run_rodagem]
-    sex: [bike_endurance]
-    sab: [bike_longo, run_transicao]
+    seg: [swim_tecnica, run_regenerativo]
+    ter: [run_limiar, bike_endurance]        # FORTE
+    qua: [swim_css, bike_limiar]             # FORTE
+    qui: [run_rodagem, forca]
+    sex: [swim_aerobio, bike_regenerativo]
+    sab: [bike_ritmo_prova, run_transicao]   # FORTE (específico de prova)
     dom: [run_longo, swim_longo]
 
   polimento:
-    seg: []
+    seg: [swim_tecnica]
     ter: [swim_css, run_ativacao]
     qua: [bike_ativacao]
-    qui: [swim_tecnica]
-    sex: [run_regenerativo]
+    qui: [swim_tecnica, run_regenerativo]
+    sex: [bike_regenerativo]
     sab: [bike_ativacao, run_ativacao]
     dom: [swim_tecnica]
 
   recuperacao:
-    seg: []
-    ter: [swim_tecnica]
-    qua: [bike_regenerativo]
-    qui: [run_regenerativo]
-    sex: []
+    seg: [swim_tecnica]
+    ter: [run_regenerativo]
+    qua: [swim_aerobio, bike_regenerativo]
+    qui: [run_rodagem]
+    sex: [swim_tecnica]
     sab: [bike_endurance]
     dom: [run_rodagem]

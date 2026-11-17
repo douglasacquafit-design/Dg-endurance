@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
@@ -48,6 +49,7 @@ class Atleta:
     prova_alvo: ProvaAlvo | None = None
     dias_folga: list[str] = field(default_factory=list)
     observacoes: str = ""
+    ciclo: str | None = None  # "3:1", "2:1", "livre" (None = padrão do config.yaml)
 
     @property
     def primeiro_nome(self) -> str:
@@ -98,16 +100,34 @@ def _parse_atleta(d: dict[str, Any]) -> Atleta:
         prova_alvo=prova,
         dias_folga=folga,
         observacoes=d.get("observacoes", ""),
+        ciclo=_parse_ciclo(d.get("ciclo"), d.get("nome")),
     )
+
+
+def _parse_ciclo(valor: Any, nome: Any = "") -> str | None:
+    if valor in (None, ""):
+        return None
+    v = str(valor).strip().lower()
+    if v in ("livre", "nenhum", "0"):
+        return "livre"
+    if not re.fullmatch(r"\d+:1", v):
+        raise ValueError(f"Atleta {nome}: ciclo '{valor}' inválido. Use '3:1', '2:1' ou 'livre'.")
+    return v
+
+
+def semanas_do_ciclo(ciclo: str | None) -> int:
+    """'3:1' -> 4 (a cada 4 semanas, 1 é de recuperação). 'livre' -> 0."""
+    if not ciclo or ciclo == "livre":
+        return 0
+    return int(ciclo.split(":")[0]) + 1
 
 
 def carregar_config(raiz: Path = RAIZ, arquivo_atletas: Path | None = None) -> Config:
     geral = _ler_yaml(raiz / "config" / "config.yaml")
-    if arquivo_atletas is None:
-        arquivo_atletas = raiz / "config" / "atletas.yaml"
-        if not arquivo_atletas.exists():
-            arquivo_atletas = raiz / "config" / "atletas.exemplo.yaml"
-    atletas = [_parse_atleta(a) for a in _ler_yaml(arquivo_atletas).get("atletas", [])]
+    arquivo_atletas = arquivo_atletas or raiz / "config" / "atletas.yaml"
+    atletas = []
+    if arquivo_atletas.exists():  # sem cadastro ainda: só o modo --demo funciona
+        atletas = [_parse_atleta(a) for a in _ler_yaml(arquivo_atletas).get("atletas", [])]
     estilo_path = raiz / "config" / "estilo_feedback.md"
     estilo = estilo_path.read_text(encoding="utf-8") if estilo_path.exists() else ""
     treinos = _ler_yaml(raiz / "biblioteca" / "treinos.yaml").get("treinos", {})

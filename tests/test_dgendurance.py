@@ -136,3 +136,48 @@ def test_comando_semana_demo(tmp_path):
     assert dados["semana_prescrita"] == "2026-11-23"
     ev = dados["atletas"][0]["proxima_semana"][0]
     assert ev["category"] == "WORKOUT" and ev["external_id"].startswith("dg-")
+
+
+# ---------------- ciclos, 80/20 e importação ----------------
+def test_ciclo_por_atleta(cfg):
+    from dgendurance.config import ProvaAlvo, Atleta, semanas_do_ciclo
+
+    assert semanas_do_ciclo("3:1") == 4 and semanas_do_ciclo("2:1") == 3 and semanas_do_ciclo("livre") == 0
+    prova = ProvaAlvo("p", date(2027, 6, 6), "70.3")
+    fases = {}
+    for ciclo in ("2:1", "3:1", "livre"):
+        a = Atleta("X", "i1", ciclo=ciclo, prova_alvo=prova)
+        semanas = [date(2026, 11, 23) + i * __import__("datetime").timedelta(days=7) for i in range(12)]
+        fases[ciclo] = sum(montar_semana(a, s, cfg)[1] == "recuperacao" for s in semanas)
+    assert fases["2:1"] == 4 and fases["3:1"] == 3 and fases["livre"] == 0
+
+
+def test_alerta_80_20(resumos, cfg):
+    from dgendurance.analise import gerar_alertas
+
+    _, r = resumos["perfeita"]
+    r.distribuicao_fc = {"z1_z2": 0.6, "z3": 0.3, "z4_mais": 0.1}
+    assert any("80/20" in a.texto for a in gerar_alertas(r, cfg.alertas))
+
+
+def test_importar_planilhas(tmp_path):
+    from pathlib import Path
+    from dgendurance.importar import importar
+
+    raiz = Path(__file__).resolve().parent.parent / "config"
+    atletas, erros = importar(raiz / "atletas_modelo.csv")
+    assert not [e for e in erros if "(aviso)" not in e]
+    bruno = next(a for a in atletas if a["nome"] == "Bruno Lima")
+    assert bruno["nivel"] == "avancado" and bruno["volume"] == 1.2 and bruno["whatsapp"] == "5511999990002"
+    carla = next(a for a in atletas if a["nome"] == "Carla Mendes")
+    assert carla["dias_folga"] == ["seg", "qua"] and carla["prova_alvo"]["distancia"] == "olimpico"
+    assert carla["ciclo"] == "2:1" and carla["prova_alvo"]["data"] == "2027-03-07"
+    atletas, _ = importar(raiz / "atletas_modelo.xlsx")
+    assert atletas[0]["intervals_id"] == "i000001"
+
+    ruim = tmp_path / "ruim.csv"
+    ruim.write_text("nome;nivel;folga;data prova\nZé;profissional;;\nJoão;iniciante;sabado;\n"
+                    "Rui;avancado;feriado;\nLia;avancado;;30/02/2027\n", encoding="utf-8")
+    atletas, erros = importar(ruim)
+    graves = [e for e in erros if "(aviso)" not in e]
+    assert [a["nome"] for a in atletas] == ["João"] and len(graves) == 3

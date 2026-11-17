@@ -61,13 +61,20 @@ aberta. Os comentários de treino do painel têm um botão **Copiar** para colar
 
 ```bash
 cp .env.example .env                              # cole as chaves
-cp config/atletas.exemplo.yaml config/atletas.yaml   # cadastre os atletas
+python -m dgendurance importar-atletas config/atletas_modelo.xlsx   # cadastro pela planilha
 python -m dgendurance testar-conexao              # confere acesso a cada atleta
 ```
 
+**Cadastro pela planilha:** abra `config/atletas_modelo.xlsx` no Excel ou Google Sheets
+(a aba "Como preencher" explica cada coluna), preencha uma linha por atleta, salve e importe.
+Também aceita `.csv` (separado por `;` ou `,`). Acentos, telefone com parênteses, datas
+`dd/mm/aaaa` e "avançado" com ç são aceitos. Linhas com erro são apontadas e nada é gravado
+até corrigir.
+
 | Arquivo | O que é |
 |---|---|
-| `config/atletas.yaml` | Seus atletas: ID do intervals.icu, WhatsApp, nível, prova alvo, folgas, observações |
+| `config/atletas_modelo.xlsx` | Planilha de cadastro dos atletas (gera o `config/atletas.yaml`) |
+| `config/atletas.yaml` | Seus atletas: ID do intervals.icu, WhatsApp, nível, ciclo, prova alvo, folgas, observações |
 | `config/estilo_feedback.md` | **Seu jeito de escrever.** Cole mensagens reais suas: a IA imita |
 | `config/config.yaml` | Limites dos alertas (TSB, rampa, HRV, sono, palavras de dor...) |
 | `biblioteca/treinos.yaml` | Sua biblioteca de treinos estruturados (pedal, corrida, natação, força) |
@@ -89,15 +96,31 @@ e os treinos só vão ao calendário com `--confirmar`.
 
 ## Como a próxima semana é decidida
 
-A fase vem das semanas que faltam até a prova alvo: **base** (mais de 16), **construção** (8 a 16),
-**pico** (3 a 7), **polimento** (0 a 2). Depois os alertas ajustam a semana:
+**Metodologia: polarizada (80/20), 7 dias com dobras.** Cerca de 80% das sessões são leves (Z1-Z2)
+e o restante é forte de verdade (VO2, subidas, tiros curtos), quase sem Z3:
+
+| Fase | Semanas até a prova | Treinos fortes na semana | Exemplos |
+|---|---|---|---|
+| Base | mais de 16 | 2 | VO2 curto no pedal, subidas na corrida |
+| Construção | 8 a 16 | 3 | VO2 longo, tiros curtos, natação velocidade, brick |
+| Pico | 3 a 7 | 3 | Limiar e ritmo de prova (específico) |
+| Polimento | 0 a 2 | ativações curtas | |
+
+Uma semana de avançado para 70.3 fica entre 11 e 12,5h. Para quem treina menos, use `dias_folga` e
+`nivel`/`volume` no cadastro.
+
+**Ciclo por atleta:** cada atleta tem o seu (`3:1`, `2:1` ou `livre`), contado de trás para frente a
+partir da prova, para a semana leve cair no lugar certo. Sem ciclo no cadastro, vale o
+`ciclo_padrao` do `config/config.yaml`.
+
+Depois os alertas ajustam a semana:
 
 | Situação na semana analisada | Próxima semana |
 |---|---|
 | 🔴 Dor/lesão relatada ou fadiga muito alta | Semana de **recuperação** |
 | 🔴 Faltou muito ou sumiu | Mesma fase, **-20% de volume** para retomar |
 | 🟡 Sinais de fadiga (HRV, sono, cansaço relatado) | Mesma fase, **-15% de volume** |
-| A cada 4 semanas (contadas até a prova) | Recuperação programada |
+| Semana leve do ciclo do atleta (3:1, 2:1...) | Recuperação programada |
 | Tudo certo | Fase normal |
 
 O volume ainda é multiplicado pelo nível do atleta, pela distância da prova e pelo `volume`
@@ -115,7 +138,8 @@ de treinador. Ajuste os modelos em `biblioteca/` para refletir a sua metodologia
 | Cumpriu menos de 50% | Cumpriu menos de 75% |
 | 4+ dias sem treinar | HRV 12% abaixo da média de 4 semanas |
 | Palavras de dor/lesão no comentário do atleta | Sono < 6h, relato de cansaço/doença, sensação ruim |
-| | Treino leve feito forte (RPE ≥ 7), mais de 35% do tempo em Z3 |
+| | Treino leve feito forte (RPE ≥ 7) |
+| | Fora do 80/20: menos de 75% do tempo em Z1-Z2, ou mais de 15% em Z3 (base/construção) |
 
 Todos os limites são editáveis em `config/config.yaml`.
 
@@ -161,6 +185,7 @@ dgendurance/
   prescricao.py  monta a próxima semana a partir da biblioteca
   feedback.py    rascunhos com IA (Claude) ou modelo de texto
   relatorio.py   painel HTML
+  importar.py    importa atletas da planilha
   demo.py        dados fictícios para testar
   cli.py         comandos
 tests/           testes automáticos (python -m pytest)

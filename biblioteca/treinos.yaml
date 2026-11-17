@@ -75,6 +75,36 @@ treinos:
       - titulo: "Desaquecimento"
         passos: ["10m 50%"]
 
+  bike_vo2_longo:
+    esporte: Ride
+    nome: "VO2max longo"
+    tipo: chave
+    objetivo: "Tiros de 5 minutos bem fortes. Recuperação completa: o resto da semana é leve."
+    blocos:
+      - titulo: "Aquecimento"
+        passos: ["15m ramp 50-75%", "2x", "- 1m 110%", "- 2m 55%"]
+      - titulo: "Principal"
+        repetir: 5
+        escala: true
+        passos: ["5m 106-112%", "5m 50%"]
+      - titulo: "Desaquecimento"
+        passos: ["10m 50%"]
+
+  bike_limiar:
+    esporte: Ride
+    nome: "Limiar (pedal)"
+    tipo: chave
+    objetivo: "Blocos no FTP. Específico para a fase de pico."
+    blocos:
+      - titulo: "Aquecimento"
+        passos: ["15m ramp 50-75%"]
+      - titulo: "Principal"
+        repetir: 3
+        escala: true
+        passos: ["10m 97-102%", "5m 50%"]
+      - titulo: "Desaquecimento"
+        passos: ["10m 50%"]
+
   bike_longo:
     esporte: Ride
     nome: "Longão de pedal"
@@ -173,6 +203,21 @@ treinos:
       - titulo: "Desaquecimento"
         passos: ["10m Z1 Pace"]
 
+  run_subidas:
+    esporte: Run
+    nome: "Subidas"
+    tipo: chave
+    objetivo: "Tiros de 1 minuto em subida, fortes. Desce trotando bem leve."
+    blocos:
+      - titulo: "Aquecimento"
+        passos: ["15m Z2 HR"]
+      - titulo: "Principal"
+        repetir: 8
+        escala: true
+        passos: ["1m Z5 HR", "2m Z1 HR"]
+      - titulo: "Desaquecimento"
+        passos: ["10m Z1 HR"]
+
   run_longo:
     esporte: Run
     nome: "Longão de corrida"
@@ -192,6 +237,16 @@ treinos:
       - titulo: "Principal"
         escala: true
         passos: ["20m 85-92% Pace"]
+
+  run_transicao_leve:
+    esporte: Run
+    nome: "Transição leve (brick)"
+    tipo: leve
+    objetivo: "Sair da bike direto para a corrida, tudo em Z2. Adaptação, não intensidade."
+    blocos:
+      - titulo: "Principal"
+        escala: true
+        passos: ["15m Z2 HR"]
 
   run_ativacao:
     esporte: Run
@@ -231,6 +286,39 @@ treinos:
         repetir: 8
         escala: true
         passos: ["100mtr 98-102% Pace"]
+      - titulo: "Desaquecimento"
+        passos: ["200mtr Z1 Pace"]
+
+  swim_aerobio:
+    esporte: Swim
+    nome: "Natação aeróbia contínua"
+    tipo: leve
+    objetivo: "Nado contínuo confortável, foco na técnica e respiração."
+    blocos:
+      - titulo: "Aquecimento"
+        passos: ["300mtr Z1 Pace"]
+      - titulo: "Principal"
+        repetir: 4
+        escala: true
+        passos: ["400mtr Z2 Pace"]
+      - titulo: "Desaquecimento"
+        passos: ["200mtr Z1 Pace"]
+
+  swim_velocidade:
+    esporte: Swim
+    nome: "Natação velocidade"
+    tipo: chave
+    objetivo: "Tiros curtos e fortes, descanso longo (30-40s). O resto é bem leve."
+    blocos:
+      - titulo: "Aquecimento"
+        passos: ["400mtr Z1 Pace"]
+      - titulo: "Principal"
+        repetir: 12
+        escala: true
+        passos: ["50mtr 110-115% Pace"]
+      - titulo: "Aeróbio"
+        escala: true
+        passos: ["600mtr Z2 Pace"]
       - titulo: "Desaquecimento"
         passos: ["200mtr Z1 Pace"]
 

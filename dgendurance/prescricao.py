@@ -8,7 +8,7 @@ from datetime import date, timedelta
 from typing import Any
 
 from .analise import VERMELHO, AMARELO, ResumoSemana, fase_treino
-from .config import DIAS, Atleta, Config
+from .config import DIAS, Atleta, Config, semanas_do_ciclo
 
 _PASSO = re.compile(r"^(\d+(?:\.\d+)?)(h|mtr|km|m|s)((?:\d+s)?)(?=\s|$)")
 _REPETICAO = re.compile(r"^\d+x$")
@@ -129,7 +129,7 @@ def escolher_fase(atleta: Atleta, semana: date, resumo: ResumoSemana | None, cfg
     - faltou muito / sumiu (VERMELHO)  -> mesma fase, volume -20% para retomar (tem prioridade
                                           sobre a recuperação programada)
     - fadiga/bem-estar em AMARELO      -> mesma fase, volume -15%
-    - a cada N semanas (contadas até a prova) -> recuperação programada
+    - ciclo do atleta (ex. 3:1), contado até a prova -> recuperação programada
     """
     fase, semanas = fase_treino(atleta, semana)
     alertas = resumo.alertas if resumo else []
@@ -141,7 +141,7 @@ def escolher_fase(atleta: Atleta, semana: date, resumo: ResumoSemana | None, cfg
         return "recuperacao", 1.0, f"semana de recuperação ({motivo})"
     if "cumprimento" in vermelhos:  # já descansou: retomar, não recuperar
         return fase, 0.8, f"fase de {fase}, volume -20% para retomar o ritmo"
-    n = int(cfg.semanas.get("recuperacao_a_cada") or 0)
+    n = semanas_do_ciclo(atleta.ciclo or cfg.geral.get("ciclo_padrao", "3:1"))
     ciclo = semanas if semanas is not None else semana.isocalendar().week
     if n and fase in ("base", "construcao") and ciclo % n == 0:
         return "recuperacao", 1.0, f"semana de recuperação programada (a cada {n})"
